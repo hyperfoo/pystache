@@ -69,11 +69,7 @@ class Template(object):
         self.tag_re = re.compile(tag % tags)
 
     def _render_sections(self, template, view):
-        while True:
-            match = self.section_re.search(template)
-            if match is None:
-                break
-
+        for match in self.section_re.finditer(template):
             section, section_name, inner = match.group(0, 1, 2)
             section_name = section_name.strip()
             it = self.view.get(section_name, None)
@@ -103,11 +99,7 @@ class Template(object):
         return template
 
     def _render_tags(self, template):
-        while True:
-            match = self.tag_re.search(template)
-            if match is None:
-                break
-
+        for match in self.tag_re.finditer(template):
             tag, tag_type, tag_name = match.group(0, 1, 2)
             tag_name = tag_name.strip()
             func = self.modifiers[tag_type]
@@ -165,6 +157,14 @@ class Template(object):
     @modifiers.set('&')
     def render_unescaped(self, tag_name):
         """Render a tag without escaping it."""
+        raw = self.view.get(tag_name, '')
+
+        # For methods with no return value
+        if not raw and raw is not 0:
+            if tag_name == '.':
+                return literal(self.view.context_list[0])
+            else:
+                return literal('')
         return literal(self.view.get(tag_name, ''))
 
     def render(self, encoding=None):
