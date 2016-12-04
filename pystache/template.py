@@ -99,14 +99,26 @@ class Template(object):
         return template
 
     def _render_tags(self, template):
-        for match in self.tag_re.finditer(template):
+        rendered = ""
+        offset = 0
+        while offset < len(template):
+            match = self.tag_re.search(template, offset)
+            if match is None:
+                break
             tag, tag_type, tag_name = match.group(0, 1, 2)
             tag_name = tag_name.strip()
             func = self.modifiers[tag_type]
             replacement = func(self, tag_name)
-            template = template.replace(tag, replacement)
-
-        return template
+            #prevent "recursion"
+            #"{{{A}}} {{{B}}}}", {"A":"{{{B}}}", "B":"{{{C}}}"}
+            # should return a... "{{{{B}}} {{{C}}}"
+            rendered += template[offset:match.start()]
+            rendered += replacement
+            offset = match.end()
+            #template = template.replace(tag, replacement)
+        #And add the remaining non match
+        rendered += template[offset:]
+        return rendered
 
     def _render_dictionary(self, template, context):
         self.view.context_list.insert(0, context)
